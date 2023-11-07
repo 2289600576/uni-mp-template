@@ -4,6 +4,8 @@
 
 当前仓库为【哪李贵了】的**项目模板**。
 
+npm add @dcloudio/uni-ui
+
 ### 技术栈
 
 - 前端框架：[uni-app](https://uniapp.dcloud.net.cn/) (Vue3 + TS + Setup)
