@@ -4,8 +4,10 @@ import AddressPanel from './components/AddressPanel.vue'
 import ServicePanelVue from './components/ServicePanel.vue'
 
 import type {
+  SkuPopupEvent,
   SkuPopupInstance,
   SkuPopupLocaldata
+  // SkuPopupProps
 } from '@/components/vk-data-goods-sku-popup/vk-data-goods-sku-popup'
 
 // 获取屏幕边界到安全区域距离
@@ -99,11 +101,21 @@ const skuPopuRef = ref<SkuPopupInstance>()
 const selectArrText = computed(() => {
   return skuPopuRef.value?.selectArr?.join(' ').trim() || '请选择商品规格'
 })
+
+const onAddCart = async (ev: SkuPopupEvent) => {
+  await postMemberCartAPI({ attrsText: selectArrText.value, count: ev.buy_num, id: ev.goods_id })
+  uni.showToast({
+    title: '添加成功'
+  })
+  isShowSku.value = false
+}
 </script>
 
 <template>
   <!-- SKU弹窗组件 -->
   <vk-data-goods-sku-popup
+    @add-cart="onAddCart"
+    :sku-list="localdata.sku_list"
     v-model="isShowSku"
     :localdata="localdata"
     :mode="mode"

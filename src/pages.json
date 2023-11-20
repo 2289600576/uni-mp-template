@@ -140,6 +140,17 @@
           }
         }
       ]
+    },
+    {
+      "root": "pagesOrder",
+      "pages": [
+        {
+          "path": "create/create",
+          "style": {
+            "navigationBarTitleText": "create"
+          }
+        }
+      ]
     }
   ],
   // 分包预下载规则
