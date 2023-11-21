@@ -66,6 +66,18 @@
       "style": {
         "navigationBarTitleText": "AddressPanel"
       }
+    },
+    {
+      "path": "pages/cart/components/CartMain",
+      "style": {
+        "navigationBarTitleText": "CartMain"
+      }
+    },
+    {
+      "path": "pages/cart/cart2",
+      "style": {
+        "navigationBarTitleText": "cart2"
+      }
     }
   ],
   "globalStyle": {
@@ -130,13 +142,13 @@
         {
           "path": "address/address",
           "style": {
-            "navigationBarTitleText": "address"
+            "navigationBarTitleText": "地址"
           }
         },
         {
           "path": "address/address-form",
           "style": {
-            "navigationBarTitleText": "address-form"
+            "navigationBarTitleText": "新建地址"
           }
         }
       ]
@@ -148,6 +160,25 @@
           "path": "create/create",
           "style": {
             "navigationBarTitleText": "create"
+          }
+        },
+        {
+          "path": "detail/detail",
+          "style": {
+            "navigationBarTitleText": "订单详情",
+            "navigationStyle": "custom"
+          }
+        },
+        {
+          "path": "payment/payment",
+          "style": {
+            "navigationBarTitleText": "支付结果"
+          }
+        },
+        {
+          "path": "list/list",
+          "style": {
+            "navigationBarTitleText": "订单列表"
           }
         }
       ]
