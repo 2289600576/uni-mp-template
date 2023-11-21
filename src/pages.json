@@ -180,6 +180,12 @@
           "style": {
             "navigationBarTitleText": "订单列表"
           }
+        },
+        {
+          "path": "list/components/OrderList",
+          "style": {
+            "navigationBarTitleText": "OrderList"
+          }
         }
       ]
     }

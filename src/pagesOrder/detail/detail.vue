@@ -53,15 +53,102 @@ const query = defineProps<{
   id: string
 }>()
 
+//获取订单详情
 const order = ref<OrderResult>()
 const getMemberOrderByIdData = async () => {
   const res = await getMemberOrderByIdAPI(query.id)
   order.value = res.result
+
+  if (
+    [OrderState.DaiShouHuo, OrderState.DaiPingJia, OrderState.YiWanCheng].includes(order.value.orderState)
+  ) {
+    getMemberOrderLogisticsByIdData()
+  }
+}
+
+// 获取物流信息
+const logisticList = ref<LogisticItem[]>([])
+const getMemberOrderLogisticsByIdData = async () => {
+  console.log('getMemberOrderLogisticsByIdData :>> ', '获取订单物流')
+  const res = await getMemberOrderLogisticsByIdAPI(query.id)
+  logisticList.value = res.result.list
+}
+
+// 删除订单
+const onOrderDelete = () => {
+  // 二次确认
+  uni.showModal({
+    content: '是否删除订单',
+    confirmColor: '#27BA9B',
+    success: async (success) => {
+      if (success.confirm) {
+        await deleteMemberOrderAPI([query.id])
+        uni.redirectTo({ url: '/pagesOrder/list/list' })
+      }
+    }
+  })
+}
+// 取消订单
+const onOrderCancel = async () => {
+  // 发送请求
+  const res = await getMemberOrderCancelByIdAPI({ id: query.id, cancelReason: reason.value })
+  // 更新订单信息
+  order.value = res.result
+  // 关闭弹窗
+  popup.value?.close!()
+  // 轻提示
+  uni.showToast({ icon: 'none', title: '订单取消成功' })
 }
 
 onLoad(() => {
   getMemberOrderByIdData()
 })
+
+//倒计时结束事件
+const onTimeup = () => {
+  //修改订单状态为 已取消
+  order.value!.orderState = OrderState.YiQuXiao
+}
+
+const onOrderPay = async () => {
+  //通过环境变量区分开发环境
+  if (import.meta.env.DEV) {
+    await getPayMockAPI(parseInt(query.id))
+  } else {
+    //生产环境：获取支付参数 + 发起微信支付
+    const res = await getPayWxPayMiniPayAPI({ orderId: query.id })
+    await wx.requestPayment(res.result)
+  }
+  //关闭当前页，再跳转支付结果页
+  uni.redirectTo({ url: `/pagesOrder/payment/payment?id=${query.id}` })
+}
+
+//是否为开发环境
+const isDev = import.meta.env.DEV
+//模拟发货
+const onOrderSend = async () => {
+  if (isDev) {
+    await getMemberOrderConsignmentByIdAPI(query.id)
+    uni.showToast({ icon: 'success', title: '模拟发货完成' })
+    //主动更新订单状态
+    order.value!.orderState = OrderState.DaiShouHuo
+  }
+}
+
+//确认收货
+const onOrderConfirm = () => {
+  // 二次确认弹窗
+  uni.showModal({
+    content: '为保障您的权益，请收到货并确认无误后，再确认收货',
+    success: async (success) => {
+      if (success.confirm) {
+        const res = await putMemberOrderReceiptByIdAPI(query.id)
+        // 更新订单状态
+        order.value = res.result
+      }
+    }
+  })
+}
 </script>
 
 <template>
@@ -83,9 +170,17 @@ onLoad(() => {
           <view class="tips">
             <text class="money">应付金额: {{ order!.payMoney }}</text>
             <text class="time">支付剩余</text>
-            00 时 29 分 59 秒
+            <!-- 倒计时组件 -->
+            <uni-countdown
+              color="#fff"
+              splitor-color="#fff"
+              :show-day="false"
+              :show-colon="false"
+              :second="order.countdown"
+              @timeup="onTimeup"
+            />>
           </view>
-          <view class="button">去支付</view>
+          <view class="button" @tap="onOrderPay">去支付</view>
         </template>
         <!-- 其他订单状态:展示再次购买按钮 -->
         <template v-else>
@@ -100,21 +195,23 @@ onLoad(() => {
               再次购买
             </navigator>
             <!-- 待发货状态：模拟发货,开发期间使用,用于修改订单状态为已发货 -->
-            <view v-if="false" class="button"> 模拟发货 </view>
+            <view v-if="isDev && order.orderState == OrderState.DaiFaHuo" class="button" @tap="onOrderSend">
+              模拟发货
+            </view>
           </view>
         </template>
       </view>
       <!-- 配送状态 -->
       <view class="shipment">
         <!-- 订单物流信息 -->
-        <view v-for="item in 1" :key="item" class="item">
-          <view class="message"> 您已在栖霞区南工院完成取件，感谢使用菜鸟驿站，期待再次为您服务。 </view>
-          <view class="date"> 2023-11-30 13:14:20 </view>
+        <view v-for="item in logisticList" :key="item.id" class="item">
+          <view class="message"> {{ item.text }} </view>
+          <view class="date"> {{ item.time }} </view>
         </view>
         <!-- 用户收货地址 -->
         <view class="locate">
-          <view class="user"> 张三 13333333333 </view>
-          <view class="address"> 江苏省 南京市 栖霞区 南工院 </view>
+          <view class="user"> {{ order.receiverContact }} {{ order.receiverMobile }} </view>
+          <view class="address"> {{ order.receiverAddress }} </view>
         </view>
       </view>
 
@@ -183,7 +280,7 @@ onLoad(() => {
       <view class="toolbar" :style="{ paddingBottom: safeAreaInsets?.bottom + 'px' }">
         <!-- 待付款状态:展示支付按钮 -->
         <template v-if="order.orderState === OrderState.DaiFuKuan">
-          <view class="button primary" @tap="null"> 去支付 </view>
+          <view class="button primary" @tap="onOrderPay"> 去支付 </view>
           <view class="button" @tap="popup?.open?.()"> 取消订单 </view>
         </template>
         <!-- 其他订单状态:按需展示按钮 -->
@@ -196,11 +293,19 @@ onLoad(() => {
             再次购买
           </navigator>
           <!-- 待收货状态: 展示确认收货 -->
-          <view class="button primary" v-if="order.orderState === OrderState.DaiShouHuo"> 确认收货 </view>
+          <view
+            @tap="onOrderConfirm"
+            class="button primary"
+            v-if="order.orderState === OrderState.DaiShouHuo"
+          >
+            确认收货
+          </view>
           <!-- 待评价状态: 展示去评价 -->
           <view class="button" v-if="order.orderState === OrderState.DaiPingJia"> 去评价 </view>
           <!-- 待评价/已完成/已取消 状态: 展示删除订单 -->
-          <view class="button delete" v-if="order.orderState >= OrderState.DaiPingJia"> 删除订单 </view>
+          <view @tap="onOrderDelete" class="button delete" v-if="order.orderState >= OrderState.DaiPingJia">
+            删除订单
+          </view>
         </template>
       </view>
     </template>
@@ -225,7 +330,7 @@ onLoad(() => {
       </view>
       <view class="footer">
         <view class="button" @tap="popup?.close?.()">取消</view>
-        <view class="button primary">确认</view>
+        <view class="button primary" @tap="onOrderCancel">确认</view>
       </view>
     </view>
   </uni-popup>
